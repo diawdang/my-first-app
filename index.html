@@ -45,6 +45,10 @@ svg text{fill:var(--mute);font-family:inherit}
 .row b{white-space:nowrap}
 .del{width:48px;height:48px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--mute);font-size:1.1rem;cursor:pointer;flex:none}
 .empty{text-align:center;color:var(--mute);padding:14px 0}
+.tools{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tools button{height:60px;font:inherit;font-weight:700;font-size:1.05rem;border-radius:14px;border:2px solid var(--acc);background:var(--card);color:var(--acc);cursor:pointer}
+.tools button:active{opacity:.8}
+.msg{margin-top:10px;font-size:.95rem;color:var(--mute);min-height:1.2em}
 </style>
 </head>
 <body>
@@ -89,6 +93,16 @@ svg text{fill:var(--mute);font-family:inherit}
 <div class="card">
   <h2>รายการของเดือนนี้</h2>
   <div id="list"></div>
+</div>
+
+<div class="card">
+  <h2>สำรอง / ย้ายข้อมูล</h2>
+  <div class="tools">
+    <button type="button" id="exp">⬇ สำรองข้อมูล</button>
+    <button type="button" id="imp">⬆ นำเข้าข้อมูล</button>
+  </div>
+  <input type="file" id="file" accept=".json,application/json" hidden>
+  <div class="msg" id="msg">สำรองเป็นไฟล์ แล้วนำไปนำเข้าในอีกเครื่องเพื่อย้ายข้อมูล</div>
 </div>
 </div>
 
@@ -161,6 +175,33 @@ function render(){
     return `<div class="row"><div class="m"><div>${esc(i.name)}</div><small>${+d[2]} ${MS[+d[1]-1]} ${+d[0]+543}</small></div><b class="${i.type==='income'?'inc':'exp'}">${i.type==='income'?'+':'-'}${fmt(i.amt)}</b><button class="del" data-id="${i.id}" aria-label="ลบรายการ">🗑</button></div>`}).join(''):'<div class="empty">ยังไม่มีรายการในเดือนนี้</div>';
   chart();
 }
+$('exp').onclick=()=>{
+  if(!items.length){$('msg').textContent='ยังไม่มีข้อมูลให้สำรอง';return}
+  const blob=new Blob([JSON.stringify({app:'income-expense-th',version:1,items},null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='รายรับรายจ่าย-สำรอง-'+todayStr()+'.json';
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+  $('msg').textContent='สำรองข้อมูลแล้ว '+items.length+' รายการ (ไฟล์อยู่ในโฟลเดอร์ดาวน์โหลด)';
+};
+$('imp').onclick=()=>$('file').click();
+$('file').onchange=e=>{
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const d=JSON.parse(r.result),arr=Array.isArray(d)?d:d.items;
+      if(!Array.isArray(arr))throw 0;
+      const ok=arr.filter(i=>i&&typeof i.date==='string'&&typeof i.name==='string'&&i.amt>0&&(i.type==='income'||i.type==='expense'));
+      const have=new Set(items.map(i=>i.id));let add=0;
+      ok.forEach(i=>{if(!have.has(i.id)){items.push({id:i.id||Date.now()+add,date:i.date,name:i.name,amt:+i.amt,type:i.type});have.add(i.id);add++}});
+      persist();render();
+      $('msg').textContent='นำเข้าสำเร็จ เพิ่ม '+add+' รายการ (ข้ามรายการที่ซ้ำ '+(ok.length-add)+')';
+    }catch(err){$('msg').textContent='ไฟล์ไม่ถูกต้อง กรุณาเลือกไฟล์สำรองที่สร้างจากแอปนี้'}
+    e.target.value='';
+  };
+  r.readAsText(f);
+};
 render();
 </script>
 </body>
