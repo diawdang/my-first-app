@@ -32,7 +32,7 @@
 
 <script>
 // ใส่ URL ที่ได้จากตอน Deploy (ลงท้ายด้วย /exec)
-const Web app URL/exec = 'วาง_WEB_APP_URL_ที่นี่';
+const API_URL = '...';
 
 const $ = id => document.getElementById(id);
 
@@ -43,7 +43,7 @@ function setStatus(msg, isError) {
 
 async function load() {
   try {
-    const res = await fetch(Web app URL/exec);
+    const res = await fetch(API_URL);
     const data = await res.json();
     if (!data.ok) throw new Error(data.error);
     const list = $('list');
@@ -69,7 +69,7 @@ $('f').addEventListener('submit', async e => {
   $('btn').disabled = true;
   setStatus('กำลังบันทึก...');
   try {
-    const res = await fetch(Web app URL, {
+    const res = await fetch(API_URL, {
       method: 'POST',
       // text/plain ทำให้ไม่เกิด preflight (CORS) ซึ่ง Apps Script ไม่รองรับ
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
